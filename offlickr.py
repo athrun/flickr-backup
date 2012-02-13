@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Offlickr
+# offlickr
 # Hugo Haas -- mailto:hugo@larve.net -- http://larve.net/people/hugo/
 # Homepage: http://larve.net/people/hugo/2005/12/offlickr/
 # License: GPLv2
@@ -52,13 +52,13 @@ class Offlickr:
         self.__httplib = httplib
 
         # Get authentication token
-        # note we must explicitly select the xmlnode parser to be compatible with FlickrAPI 1.2
-
-#        self.fapi = FlickrAPI(self.__flickrAPIKey, self.__flickrSecret,
-#                              format='xmlnode')
         self.fapi = FlickrAPI(self.__flickrAPIKey, self.__flickrSecret)
-        self.fapi.token.path = '/volume1/backup_flickr/tokens'
-        
+
+        # Override the on-disk token cache
+        if os.path.isdir (os.environ.get ("FLICKR_TOKEN_DIR")):
+            print "[*] Using %s as on-disk token cache" % os.environ.get ("FLICKR_TOKEN_DIR")
+            self.fapi.token_cache.path = os.environ.get ("FLICKR_TOKEN_DIR")
+
         (token, frob) = self.fapi.get_token_part_one()
         if not token:
             raw_input('Press ENTER after you authorized this program')
@@ -271,7 +271,7 @@ class Offlickr:
 def usage():
     """Command line interface usage"""
 
-    print 'Usage: Offlickr.py -i <flickr Id>'
+    print 'Usage: offlickr.py -i <flickr Id>'
     print 'Backs up Flickr photos and metadata'
     print 'Options:'
     print '\t-f <date>\tbeginning of the date range'
