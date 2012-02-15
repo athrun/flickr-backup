@@ -55,7 +55,7 @@ class Offlickr:
         self.fapi = FlickrAPI(self.__flickrAPIKey, self.__flickrSecret)
 
         # Override the on-disk token cache
-        if os.path.isdir (os.environ.get ("FLICKR_TOKEN_DIR")):
+        if os.path.isdir (os.environ.get ("FLICKR_TOKEN_DIR", "")):
             print "[*] Using %s as on-disk token cache" % os.environ.get ("FLICKR_TOKEN_DIR")
             self.fapi.token_cache.path = os.environ.get ("FLICKR_TOKEN_DIR")
 
