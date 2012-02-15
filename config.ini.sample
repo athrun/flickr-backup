@@ -1,0 +1,5 @@
+[backup]
+flickr_uid: 00000000
+backup_dir: /path/to/backup/dir/
+album_output_dir: /path/to/album/output/
+
