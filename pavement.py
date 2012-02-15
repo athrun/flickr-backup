@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+#
+# This file designed to work with the Paver build tool
+# see: http://paver.github.com/paver/
+#
 from paver.easy import *
 import sys, os
 import shutil
