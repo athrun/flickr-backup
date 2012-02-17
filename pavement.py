@@ -16,23 +16,26 @@ def auto ():
     """
     # Read the config.ini file
     config_file = path (__file__).realpath ().dirname () / "config.ini"
+    if not config_file.exists ():
+        error ("Unable to find config file: %s", config_file)
+        sys.exit (0)
     config = ConfigParser.ConfigParser ()
     config.read (config_file)
     options.update (config.items ("backup"))
-    
+
     # Define all the folders we require
     folders = [{"backup_dir": path (options.backup_dir)},
                {"sets_dir": path (options.backup_dir) / "sets"},
                {"content_dir": path (options.backup_dir) / "content"},
                {"tokens_dir":  path (options.backup_dir) / "tokens"},
                {"album_output_dir": path (options.album_output_dir)}]
-    
+
     # Make sure the folders are created
     # and populate the config options
     for item in folders:
         [d.mkdir () for d in item.values ()]
         options.update (item)
-    
+
     # Set the env var pointing to the token dir
     os.environ ["FLICKR_TOKEN_DIR"] = options.tokens_dir
 
@@ -46,7 +49,7 @@ def backup_sets ():
 def backup_content ():
     """ Backup flickr content (actual photo & video files).
     """
-    sh_v ("./offlickr.py -p -n -d '%s' -i %s" % (options.content, options.flickr_uid))  
+    sh_v ("./offlickr.py -p -n -d '%s' -i %s" % (options.content, options.flickr_uid))
 
 @task
 @needs (["backup_sets", "backup_content"])
@@ -153,4 +156,4 @@ def parse_sets_info (sets_dir, content_dir):
             "photos": photo_id_list
         })
     return sets_list
-    
+
