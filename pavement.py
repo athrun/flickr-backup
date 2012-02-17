@@ -49,7 +49,7 @@ def backup_sets ():
 def backup_content ():
     """ Backup flickr content (actual photo & video files).
     """
-    sh_v ("./offlickr.py -p -n -d '%s' -i %s" % (options.content, options.flickr_uid))
+    sh_v ("./offlickr.py -p -n -d '%s' -i %s" % (options.content_dir, options.flickr_uid))
 
 @task
 @needs (["backup_sets", "backup_content"])
