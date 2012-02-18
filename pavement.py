@@ -18,7 +18,7 @@ def auto ():
     config_file = path (__file__).realpath ().dirname () / "config.ini"
     if not config_file.exists ():
         error ("Unable to find config file: %s", config_file)
-        sys.exit (0)
+        sys.exit (1)
     config = ConfigParser.ConfigParser ()
     config.read (config_file)
     options.update (config.items ("backup"))
@@ -109,6 +109,37 @@ def generate_album ():
                          os.path.join (album_output_dir, set ["name"].encode ("utf-8"), "%s.mpg" % photo_id))
             else:
                 print "Don't know what to do of %s in set %s." % (photo_id, set ["name"].encode ("utf-8"))
+
+@task
+def pictures2s3 ():
+    """ Synchronize pictures content to Amazon S3.
+    """
+    if not path (options.backup_dir).exists ():
+        error ("[%s] doesn't exists!" % options.backup_dir)
+        sys.exit (1)
+    s3_bucket = "s3://pictures.zaft.fr/"
+    info ("Initiating sync of [%s] to %s" % (options.backup_dir, s3_bucket))
+    sh_v ("s3cmd sync --skip-existing --delete-removed -c s3cmd.ini %s %s"
+          % (options.backup_dir, s3_bucket))
+
+@task
+def music2s3 ():
+    """ Synchronize music content to Amazon S3.
+    """
+    if not path (options.music_dir).exists ():
+        error ("[%s] doesn't exists!" % options.music_dir)
+        sys.exit (1)
+    s3_bucket = "s3://music.zaft.fr/"
+    info ("Initiating sync of [%s] to %s" % (options.music_dir, s3_bucket))
+    sh_v ("s3cmd sync --reduced-redundancy --skip-existing --delete-removed -c s3cmd.ini %s %s"
+          % (options.music_dir, s3_bucket))
+
+@task
+@needs (["music2s3", "pictures2s3"])
+def sync2s3 ():
+    """ Synchronize all content to Amazon S3.
+    """
+    pass
 
 # No tasks below this point.
 def sh_v(command, ignore_error=False, cwd=None):
