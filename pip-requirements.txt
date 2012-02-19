@@ -1,3 +1,4 @@
 Paver==1.0.5
 flickrapi==1.4.2
+boto==2.2.2
 https://github.com/s3tools/s3cmd/zipball/v1.0.1#egg=s3cmd
