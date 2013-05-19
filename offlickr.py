@@ -485,19 +485,29 @@ def backupPhotos(
                 )
             downloader.start()
         else:
-            backupPhoto(
-                i,
-                total,
-                pid,
-                p.attrib['title'],
-                target,
-                hash_level,
-                offlickr,
-                doNotRedownload,
-                getPhotos,
-                overwritePhotos,
-                )
-
+            retries = 5
+            interval = 30
+            current = 1
+            while current <= retries:
+                try:
+                    backupPhoto(
+                        i,
+                        total,
+                        pid,
+                        p.attrib['title'],
+                        target,
+                        hash_level,
+                        offlickr,
+                        doNotRedownload,
+                        getPhotos,
+                        overwritePhotos,
+                    )
+                    break
+                except Exception as e:
+                    current += 1
+                    print "[!] %s - %s" % (type (e).__name__, e.message)
+                    print "[!] Attempt [%i/%i] in %s secs." % (current, retries, interval * current)
+                    time.sleep (interval * current)
 
 def backupLocation(
     threads,
