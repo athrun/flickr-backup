@@ -119,7 +119,7 @@ def pictures2s3 ():
         sys.exit (1)
     s3_bucket = "s3://pictures.zaft.fr/"
     info ("Initiating sync of [%s] to %s" % (options.backup_dir, s3_bucket))
-    sh_v ("s3cmd sync --skip-existing --delete-removed -c s3cmd.ini %s %s"
+    sh_v ("s3cmd sync --exclude '@eaDir/*' --delete-removed -c s3cmd.ini %s %s"
           % (options.backup_dir, s3_bucket))
 
 @task
@@ -131,11 +131,23 @@ def music2s3 ():
         sys.exit (1)
     s3_bucket = "s3://music.zaft.fr/"
     info ("Initiating sync of [%s] to %s" % (options.music_dir, s3_bucket))
-    sh_v ("s3cmd sync --reduced-redundancy --skip-existing --delete-removed -c s3cmd.ini %s %s"
+    sh_v ("s3cmd sync --reduced-redundancy --exclude '@eaDir/*' --no-check-md5 --delete-removed -c s3cmd.ini %s %s"
           % (options.music_dir, s3_bucket))
 
 @task
-@needs (["music2s3", "pictures2s3"])
+def dropbox2s3 ():
+    """ Synchronize dropbox content to Amazon S3.
+    """
+    if not path (options.dropbox_dir).exists ():
+        error ("[%s] doesn't exists!" % options.dropbox_dir)
+        sys.exit (1)
+    s3_bucket = "s3://documents.zaft.fr/dropbox/"
+    info ("Initiating sync of [%s] to %s" % (options.dropbox_dir, s3_bucket))
+    sh_v ("s3cmd sync --exclude '@eaDir/*' --delete-removed -c s3cmd.ini %s %s"
+          % (options.dropbox_dir, s3_bucket))
+
+@task
+@needs (["music2s3", "pictures2s3", "dropbox2s3"])
 def sync2s3 ():
     """ Synchronize all content to Amazon S3.
     """
