@@ -155,7 +155,7 @@ def podcasts2s3 ():
         sys.exit (1)
     s3_bucket = "s3://www.zaft.fr/podcasts/"
     info ("Initiating sync of [%s] to %s" % (options.podcasts_dir, s3_bucket))
-    sh_v ("s3cmd sync --reduced-redundancy --exclude '@eaDir/*' --no-check-md5 --exclude 'venv/*' --delete-removed -c s3cmd.ini %s %s"
+    sh_v ("s3cmd sync --reduced-redundancy --acl-public --exclude '@eaDir/*' --no-check-md5 --exclude 'venv/*' --delete-removed -c s3cmd.ini %s %s"
           % (options.podcasts_dir, s3_bucket))
 
 @task
