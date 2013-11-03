@@ -147,6 +147,18 @@ def dropbox2s3 ():
           % (options.dropbox_dir, s3_bucket))
 
 @task
+def podcasts2s3 ():
+    """ Synchronize podcasts to Amazon S3.
+    """
+    if not path (options.tools_dir).exists ():
+        error ("[%s] doesn't exists!" % options.podcasts_dir)
+        sys.exit (1)
+    s3_bucket = "s3://www.zaft.fr/podcasts/"
+    info ("Initiating sync of [%s] to %s" % (options.podcasts_dir, s3_bucket))
+    sh_v ("s3cmd sync --reduced-redundancy --exclude '@eaDir/*' --no-check-md5 --exclude 'venv/*' --delete-removed -c s3cmd.ini %s %s"
+          % (options.podcasts_dir, s3_bucket))
+
+@task
 def tools2s3 ():
     """ Synchronize tools content to Amazon S3.
     """
