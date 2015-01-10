@@ -29,8 +29,8 @@ maxTime = '9999999999'
 
 # Gotten from Flickr
 
-flickrAPIKey = '1391fcd0a9780b247cd6a101272acf71'
-flickrSecret = 'fd221d0336de3b6d'
+flickrAPIKey = u'1391fcd0a9780b247cd6a101272acf71'
+flickrSecret = u'fd221d0336de3b6d'
 
 
 class Offlickr:
@@ -51,19 +51,27 @@ class Offlickr:
         self.__flickrSecret = secret
         self.__httplib = httplib
 
-        # Get authentication token
+        # Initialize the FlickrAPI
         self.fapi = FlickrAPI(self.__flickrAPIKey, self.__flickrSecret)
 
-        # Override the on-disk token cache
-        if os.path.isdir (os.environ.get ("FLICKR_TOKEN_DIR", "")):
-            print "[*] Using %s as on-disk token cache" % os.environ.get ("FLICKR_TOKEN_DIR")
-            self.fapi.token_cache.path = os.environ.get ("FLICKR_TOKEN_DIR")
+        # Only do this if we don't have a valid token already
+        if not self.fapi.token_valid(perms=u'read'):
 
-        (token, frob) = self.fapi.get_token_part_one()
-        if not token:
-            raw_input('Press ENTER after you authorized this program')
-        self.fapi.get_token_part_two((token, frob))
-        self.token = token
+            # Get request token
+            self.fapi.get_request_token(oauth_callback=u'oob')
+
+            # Generate and display the authentication URL.
+            authorize_url = self.fapi.auth_url(perms=u'read')
+            print "[!] Please open this URL and authorize access: "
+            print "[!] ", authorize_url
+            print "[!] and then enter the authorization code below."
+
+            # Get the verifier code from the user.
+            verifier = unicode(raw_input('>> '))
+
+            # Trade the request token for an access token
+            self.fapi.get_access_token(verifier)
+
         self.flickrUserId = uid
         self.dryrun = dryrun
         self.verbose = verbose
@@ -89,9 +97,7 @@ class Offlickr:
             if self.verbose:
                 print 'Requesting a page...'
             n = n + 1
-            rsp = self.fapi.photos_search(
-                api_key=self.__flickrAPIKey,
-                auth_token=self.token,
+            rsp = self.fapi.photos.search(
                 user_id=self.flickrUserId,
                 per_page=str(flickr_max),
                 page=str(n),
@@ -123,8 +129,7 @@ class Offlickr:
                 print 'Requesting a page...'
             n = n + 1
             rsp = \
-                self.fapi.photos_getWithGeoData(api_key=self.__flickrAPIKey,
-                    auth_token=self.token, user_id=self.flickrUserId,
+                self.fapi.photos.getWithGeoData(user_id=self.flickrUserId,
                     per_page=str(flickr_max), page=str(n))
             if self.__testFailure(rsp):
                 return None
@@ -142,8 +147,7 @@ class Offlickr:
         """Returns a string containing location of a photo (in XML)"""
 
         rsp = \
-            self.fapi.photos_geo_getLocation(api_key=self.__flickrAPIKey,
-                auth_token=self.token, photo_id=pid)
+            self.fapi.photos.geo.getLocation(photo_id=pid)
         if self.__testFailure(rsp):
             return None
         info = ElementTree.tostring (rsp.find("photo"), "utf-8")
@@ -153,8 +157,7 @@ class Offlickr:
         """Returns a string containing location permision for a photo (in XML)"""
 
         rsp = \
-            self.fapi.photos_geo_getPerms(api_key=self.__flickrAPIKey,
-                auth_token=self.token, photo_id=pid)
+            self.fapi.photos.geo.getPerms(photo_id=pid)
         if self.__testFailure(rsp):
             return None
         info = ElementTree.tostring (rsp.find("perms"), "utf-8")
@@ -163,8 +166,7 @@ class Offlickr:
     def getPhotosetList(self):
         """Returns a list of photosets for a user"""
 
-        rsp = self.fapi.photosets_getList(api_key=self.__flickrAPIKey,
-                auth_token=self.token, user_id=self.flickrUserId)
+        rsp = self.fapi.photosets.getList(user_id=self.flickrUserId)
         if self.__testFailure(rsp):
             return None
         return rsp.find("photosets").findall("photoset")
@@ -172,8 +174,7 @@ class Offlickr:
     def getPhotosetInfo(self, pid, method):
         """Returns a string containing information about a photoset (in XML)"""
 
-        rsp = method(api_key=self.__flickrAPIKey,
-                     auth_token=self.token, photoset_id=pid)
+        rsp = method(photoset_id=pid)
         if self.__testFailure(rsp):
             return None
         info = ElementTree.tostring (rsp.find("photoset"), "utf-8")
@@ -184,8 +185,7 @@ class Offlickr:
 
         if self.verbose:
             print 'Requesting metadata for photo %s' % pid
-        rsp = self.fapi.photos_getInfo(api_key=self.__flickrAPIKey,
-                auth_token=self.token, photo_id=pid)
+        rsp = self.fapi.photos.getInfo(photo_id=pid)
         if self.__testFailure(rsp):
             return None
         [source, isVideo] = self.getOriginalPhoto(rsp.find("photo").attrib['id'])
@@ -199,8 +199,7 @@ class Offlickr:
         if self.verbose:
             print 'Requesting comments for photo %s' % pid
         rsp = \
-            self.fapi.photos_comments_getList(api_key=self.__flickrAPIKey,
-                auth_token=self.token, photo_id=pid)
+            self.fapi.photos.comments.getList(photo_id=pid)
         if self.__testFailure(rsp):
             return None
         comments = ElementTree.tostring (rsp.find("comments"), "utf-8")
@@ -209,8 +208,7 @@ class Offlickr:
     def getPhotoSizes(self, pid):
         """Returns a string with is a list of available sizes for a photo"""
 
-        rsp = self.fapi.photos_getSizes(api_key=self.__flickrAPIKey,
-                auth_token=self.token, photo_id=pid)
+        rsp = self.fapi.photos.getSizes(photo_id=pid)
         if self.__testFailure(rsp):
             return None
         return rsp
@@ -639,7 +637,7 @@ def main():
             usage()
             sys.exit(0)
         if o == '-i':
-            flickrUserId = a
+            flickrUserId = unicode(a)
         if o == '-p':
             getPhotos = True
         if o == '-o':
