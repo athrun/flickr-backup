@@ -182,6 +182,32 @@ class Offlickr:
         info = ElementTree.tostring (rsp.find("photoset"), "utf-8")
         return info
 
+    def getPhotosetPhotos(self, pid):
+        """Returns all photos in a Photoset"""
+        
+        # Get first page of result
+        rsp = self.fapi.photosets_getPhotos(photoset_id=pid)
+        if self.__testFailure(rsp):
+            return None
+
+        photoset_element = rsp.find("photoset")
+        current_page = 1
+        total_pages = int(photoset_element.attrib["pages"])
+
+        # if more than one page, iterate and add the result to the previous
+        # photoset_element
+        if total_pages > 1:
+            print("[!] {} pages found for photoset [{}]. ".format(total_pages, pid))
+            while current_page < total_pages:
+                current_page += 1
+                rsp2 = self.fapi.photosets_getPhotos(photoset_id=pid, page=current_page)
+                if self.__testFailure(rsp):
+                    break
+                photoset_element.extend(rsp2.find("photoset"))
+
+        info = ElementTree.tostring(photoset_element, "utf-8")
+        return info
+
     def getPhotoMetadata(self, pid):
         """Returns an array containing containing the photo metadata (as a string), and the format of the photo"""
 
@@ -585,8 +611,8 @@ def backupPhotosets(offlickr, target, hash_level):
         else:
             fileWrite(offlickr.dryrun, target_dir(target, hash_level,
                       pid), 'set_' + pid + '_info.xml', info)
-        photos = offlickr.getPhotosetInfo(pid,
-                offlickr.fapi.photosets_getPhotos)
+
+        photos = offlickr.getPhotosetPhotos(pid)
         if photos == None:
             print 'Failed!'
         else:
