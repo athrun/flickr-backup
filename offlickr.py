@@ -21,7 +21,7 @@ from xml.etree import ElementTree
 # Beej's Python Flickr API
 # http://beej.us/flickr/flickrapi/
 
-from flickrapi import FlickrAPI
+import flickrapi
 import logging
 
 __version__ = '0.22+ - 2010-05-15 - Modified by Athrun'
@@ -51,8 +51,10 @@ class Offlickr:
         self.__flickrSecret = secret
         self.__httplib = httplib
 
+        # Monkeypatch the flickrapi tokencache
+        flickrapi.OAuthTokenCache.__init__ = _init_oauth_token_cache
         # Initialize the FlickrAPI
-        self.fapi = FlickrAPI(self.__flickrAPIKey, self.__flickrSecret)
+        self.fapi = flickrapi.FlickrAPI(self.__flickrAPIKey, self.__flickrSecret)
 
         # Only do this if we don't have a valid token already
         if not self.fapi.token_valid(perms=u'read'):
@@ -711,6 +713,23 @@ def main():
             overwritePhotos,
             )
 
+def _init_oauth_token_cache(self, api_key, lookup_key=''):
+    """ Monkeypatching of __init__ from FlickrAPI's OAuthTokenCache
+        Creates a new token cache instance.
+    """
+    assert lookup_key is not None
+    
+    self.api_key = api_key
+    self.lookup_key = lookup_key
+    #self.path = os.path.expanduser(os.path.join("~", ".flickr"))
+    self.path = os.environ ["FLICKR_TOKEN_DIR"]
+    self.filename = os.path.join(self.path, 'oauth-tokens.sqlite')
+    print("Using [{}] as the Flickr token cache.".format(self.filename))
+
+    if not os.path.exists(self.path):
+        os.makedirs(self.path)
+    
+    self.create_table()
 
 if __name__ == '__main__':
     main()
