@@ -17,6 +17,8 @@ import time
 import os.path
 import threading
 from xml.etree import ElementTree
+from urlparse import urlparse
+import requests
 
 # Beej's Python Flickr API
 # http://beej.us/flickr/flickrapi/
@@ -442,13 +444,20 @@ def backupPhoto(
 
     isPrivateFailure = False
     if isVideo:
-        sourceconnection = urllib.urlopen(source)
+        #sourceconnection = urllib.urlopen(source)
+        r = requests.head(source)
         try:
-            format = sourceconnection.headers['Content-Disposition'].split('.')[-1].rstrip('"')
-        except:
-            print 'warning: private videos cannot be backed up due to a Flickr bug'
-            format = 'privateVideofailure'
-            isPrivateFailure = True
+            #format = sourceconnection.headers['Content-Disposition'].split('.')[-1].rstrip('"')
+            format = urlparse(r.headers['location']).path.rsplit('.', 1)[1]
+        except IndexError:
+            print("[!] Unable to find the format of video [{}].".format(id))
+            print("[!] Using '.mpg' as extention.")
+            format = 'mpg'
+        #except Exception as e:
+        #    print(e)
+        #    print 'warning: private videos cannot be backed up due to a Flickr bug'
+        #    format = 'privateVideofailure'
+        #    isPrivateFailure = True
 
     filename = id + '.' + format
 
@@ -475,6 +484,7 @@ def backupPhotos(
     ):
     """Back photos up for a particular time range"""
 
+    t = None
     if dateHi == maxTime:
         t = time.time()
         print 'For incremental backups, the current time is %.0f' % t
@@ -483,7 +493,7 @@ def backupPhotos(
     photos = offlickr.getPhotoList(dateLo, dateHi)
     if photos == None:
         print 'No photos found'
-        sys.exit(1)
+        sys.exit(0)
 
     total = len(photos)
     print 'Backing up', total, 'photos'
@@ -534,6 +544,16 @@ def backupPhotos(
                     print "[!] %s - %s" % (type (e).__name__, e.message)
                     print "[!] Attempt [%i/%i] in %s secs." % (current, retries, interval * current)
                     time.sleep (interval * current)
+    # We're done
+    if t and os.environ.get("FLICKR_TOKEN_DIR"):
+        state_file = os.path.join(os.environ ["FLICKR_TOKEN_DIR"], "last_backup")
+        try:
+            with open(state_file, "w") as f:
+                timestamp = "%.0f" % t
+                f.write(timestamp)
+                print("Wrote last backup date [{}] to [{}]".format(timestamp, state_file))
+        except IOError:
+            print("[!] Couldn't write to [{}]".format(state_file))
 
 def backupLocation(
     threads,
@@ -704,6 +724,17 @@ def main():
         print target + ' is not a directory; please fix that.'
         sys.exit(1)
 
+    # if no beginning time range was provided,
+    # check if there's a last backup status file available
+    if dateLo == '1' and os.environ.get("FLICKR_TOKEN_DIR"):
+        state_file = os.path.join(os.environ["FLICKR_TOKEN_DIR"], "last_backup")
+        try:
+            with open(state_file, "r") as f:
+                dateLo = f.read().rstrip()
+                print("Loaded last backup time [{}] from [{}]".format(dateLo, state_file))
+        except IOError:
+            print("[!] Couldn't read from [{}]".format(state_file))
+
     offlickr = Offlickr(
         flickrAPIKey,
         flickrSecret,
@@ -746,8 +777,9 @@ def _init_oauth_token_cache(self, api_key, lookup_key=''):
     
     self.api_key = api_key
     self.lookup_key = lookup_key
-    #self.path = os.path.expanduser(os.path.join("~", ".flickr"))
-    self.path = os.environ ["FLICKR_TOKEN_DIR"]
+    self.path = os.environ.get("FLICKR_TOKEN_DIR")
+    if not self.path:
+        self.path = os.path.expanduser(os.path.join("~", ".flickr"))
     self.filename = os.path.join(self.path, 'oauth-tokens.sqlite')
     print("Using [{}] as the Flickr token cache.".format(self.filename))
 
