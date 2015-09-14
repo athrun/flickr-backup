@@ -498,6 +498,8 @@ def backupPhotos(
     total = len(photos)
     print 'Backing up', total, 'photos'
 
+    failure = False
+
     if threads > 1:
         concurrentThreads = threading.Semaphore(threads)
     i = 0
@@ -543,9 +545,13 @@ def backupPhotos(
                     current += 1
                     print "[!] %s - %s" % (type (e).__name__, e.message)
                     print "[!] Attempt [%i/%i] in %s secs." % (current, retries, interval * current)
+                    if not current < retries:
+                        print("[!] Impossible to fetch [{}]".format(pid))
+                        failure = True
+
                     time.sleep (interval * current)
-    # We're done
-    if t and os.environ.get("FLICKR_TOKEN_DIR"):
+    # We're done. Only save progress if nothing failed.
+    if not failure and t and os.environ.get("FLICKR_TOKEN_DIR"):
         state_file = os.path.join(os.environ ["FLICKR_TOKEN_DIR"], "last_backup")
         try:
             with open(state_file, "w") as f:
