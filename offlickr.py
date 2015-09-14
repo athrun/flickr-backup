@@ -201,7 +201,7 @@ class Offlickr:
             while current_page < total_pages:
                 current_page += 1
                 rsp2 = self.fapi.photosets_getPhotos(photoset_id=pid, page=current_page)
-                if self.__testFailure(rsp):
+                if self.__testFailure(rsp2):
                     break
                 photoset_element.extend(rsp2.find("photoset"))
 
@@ -618,7 +618,6 @@ def backupPhotosets(offlickr, target, hash_level):
         else:
             fileWrite(offlickr.dryrun, target_dir(target, hash_level,
                       pid), 'set_' + pid + '_photos.xml', photos)
-
 
         # Do we want the picture too?
 
