@@ -131,7 +131,7 @@ def music2s3 ():
         sys.exit (1)
     s3_bucket = "s3://music.zaft.fr/"
     info ("Initiating sync of [%s] to %s" % (options.music_dir, s3_bucket))
-    sh_v ("s3cmd sync --reduced-redundancy --exclude '@eaDir/*' --no-check-md5 --delete-removed -c s3cmd.ini %s %s"
+    sh_v ("s3cmd sync --exclude '@eaDir/*' --no-check-md5 --delete-removed -c s3cmd.ini %s %s"
           % (options.music_dir, s3_bucket))
 
 @task
